@@ -1104,7 +1104,7 @@ def _main(parser):
         if options.mode == "vulcan" or scons_mode == "vulcan":
             # Write the build graph
             graph = "scons.gv"
-            #SCons.Spirent.GraphWriter().write(graph, fs.Top)
+            SCons.Spirent.GraphWriter().write(graph, fs.Top)
             # Get the vulcan command line options
             if options.mode == "vulcan":
                 vulcan_options = options.vulcan_opts;
