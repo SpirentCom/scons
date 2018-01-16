@@ -48,6 +48,7 @@ import sys
 import time
 import traceback
 import sysconfig
+import subprocess
 
 import SCons.CacheDir
 import SCons.Debug
@@ -1099,17 +1100,36 @@ def _main(parser):
                                           targets, target_top)
 
     else:
-        # Write the build graph
-        graph = os.environ.get("SCONS_GRAPH")
-        if graph:
+        scons_mode = os.environ.get("SCONS_MODE")
+        if options.mode == "vulcan" or scons_mode == "vulcan":
+            # Write the build graph
+            graph = "scons.gv"
             SCons.Spirent.GraphWriter().write(graph, fs.Top)
-
-        # Build the targets
-        nodes = _build_targets(fs, options, targets, target_top)
-        if not nodes:
-            revert_io()
-            print('Found nothing to build')
-            exit_status = 2
+            # Get the vulcan command line options
+            if options.mode == "vulcan":
+                vulcan_options = options.vulcan_opts;
+            else:
+                vulcan_options = []
+                vulcan_options.append(os.environ.get("SCONS_VULCAN_OPTS"))
+            # Get the path for vulcan exe
+            vulcan_path = os.environ.get("SCONS_VULCAN")
+            if vulcan_path:
+                vulcan_command = os.path.join(vulcan_path, "vulcan")
+            else:
+                # Search in current directory
+                vulcan_command = "vulcan"
+            # Call the vulcan builder
+            progress_display("scons: Calling vulcan...")
+            progress_display("vulcan run-build %s %s" % (vulcan_options, graph))
+            vulcan_process = subprocess.Popen([vulcan_command, "run-build", vulcan_options, graph])
+            vulcan_process.wait() 
+        else:           
+            #Build the targets
+            nodes = _build_targets(fs, options, targets, target_top)
+            if not nodes:
+                revert_io()
+                print('Found nothing to build')
+                exit_status = 2
 
 def _build_targets(fs, options, targets, target_top):
 

@@ -904,7 +904,25 @@ def Parser(version):
                   nargs=1,
                   dest="repository", default=[],
                   action="append",
-                  help="Search REPOSITORY for source and target files.")
+                  help="Search REPOSITORY for source and target files.")       
+
+    # Options for SCons to work in local mode (regular) or in Vulcan mode
+    mode_options = ["local", "vulcan"]
+    
+    opt_mode_help = "Controls the scons build mode: %s." % ", ".join(mode_options)
+
+    op.add_option('--mode',
+                  nargs=1, choices=mode_options,
+                  dest="mode", default="local",
+                  help=opt_mode_help,
+                  metavar="MODE")
+    
+    op.add_option('--vulcan-opts',
+                  nargs=1, type="string",
+                  dest="vulcan_opts", default=[],
+                  action="append",
+                  help="Arguments for vulcan.",
+                  metavar="ARGS")
 
     # Options from Make and Cons classic that we do not yet support,
     # but which we may support someday and whose (potential) meanings
