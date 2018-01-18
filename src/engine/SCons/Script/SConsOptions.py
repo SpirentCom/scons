@@ -904,7 +904,7 @@ def Parser(version):
                   nargs=1,
                   dest="repository", default=[],
                   action="append",
-                  help="Search REPOSITORY for source and target files.")       
+                  help="Search REPOSITORY for source and target files.")
 
     # Options for SCons to work in local mode (regular) or in Vulcan mode
     mode_options = ["local", "vulcan"]
@@ -913,7 +913,7 @@ def Parser(version):
 
     op.add_option('--mode',
                   nargs=1, choices=mode_options,
-                  dest="mode", default="local",
+                  dest="mode", default=None,
                   help=opt_mode_help,
                   metavar="MODE")
     
