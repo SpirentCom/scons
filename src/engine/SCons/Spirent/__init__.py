@@ -12,14 +12,10 @@ import SCons.SConf
 
 def vulcan_builder(fs, options, graph):
     # Get the vulcan command line options
-    vulcan_options = options.vulcan_opts
-    if not vulcan_options:
-        options_str = os.environ.get("SCONS_VULCAN_OPTS")
-        if not options_str:
-            print("scons: error, no options given to vulcan command")
-            return 1
-        else:
-            vulcan_options.append(options_str)
+    vulcan_options = options.vulcan_opts or os.environ.get("SCONS_VULCAN_OPTS")
+    if vulcan_options is None:
+        print("scons: error, no options given to vulcan command")
+        return 1
 
     # Get the path for vulcan exe
     vulcan_path = os.environ.get("SCONS_VULCAN_PATH")
@@ -36,10 +32,11 @@ def vulcan_builder(fs, options, graph):
         temp_file = tempfile.NamedTemporaryFile(mode="w+t", suffix=".gv", prefix="scons", delete=False)
         graph = temp_file.name
         GraphWriter().write(graph, fs.Top)
+        temp_file.close()
 
     # Call the vulcan
     print("scons-vulcan: Calling vulcan...")
-    vulcan_process = subprocess.Popen([vulcan_command, "run-build", vulcan_options, graph], shell=True)
+    vulcan_process = subprocess.Popen(vulcan_command + " run-build " + vulcan_options + " " + graph, shell=True)
     vulcan_process.wait()
 
     if vulcan_process.returncode == 0:
@@ -49,7 +46,6 @@ def vulcan_builder(fs, options, graph):
 
     # Clean the tempfile, if created
     if temp_file:
-        temp_file.close()
         os.unlink(temp_file.name)
 
     return vulcan_process.returncode
