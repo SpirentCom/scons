@@ -12,10 +12,7 @@ import SCons.SConf
 
 def vulcan_builder(fs, options, graph):
     # Get the vulcan command line options
-    vulcan_options = options.vulcan_opts or os.environ.get("SCONS_VULCAN_OPTS")
-    if vulcan_options is None:
-        print("scons: error, no options given to vulcan command")
-        return 1
+    vulcan_options = options.vulcan_opts or os.environ.get("SCONS_VULCAN_OPTS") or ""
 
     # Get the path for vulcan exe
     vulcan_path = os.environ.get("SCONS_VULCAN_PATH")
