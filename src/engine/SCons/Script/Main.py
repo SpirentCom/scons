@@ -1105,10 +1105,10 @@ def _main(parser):
             SCons.Spirent.GraphWriter().write(graph, fs.Top)
 
         # If the scons mode is set to vulcan, call the vulcan builder
-        scons_mode = os.environ.get("SCONS_MODE")
-        if options.mode == "vulcan" or (scons_mode == "vulcan" and options.mode != "local"):
+        scons_mode = options.mode or os.environ.get("SCONS_MODE")
+        if scons_mode == "vulcan":
             vulcan_status = SCons.Spirent.vulcan_builder(fs, options, graph)
-            if  vulcan_status != 0:
+            if vulcan_status != 0:
                 # set the exit_status which is used in caller
                 exit_status = 2
 

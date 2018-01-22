@@ -919,8 +919,7 @@ def Parser(version):
     
     op.add_option('--vulcan-opts',
                   nargs=1, type="string",
-                  dest="vulcan_opts", default=[],
-                  action="append",
+                  dest="vulcan_opts", default=None,
                   help="Arguments for vulcan.",
                   metavar="ARGS")
 
