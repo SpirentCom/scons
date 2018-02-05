@@ -4,10 +4,49 @@ import hashlib
 import json
 import os.path
 import time
+import subprocess
 
 import SCons.Action
 import SCons.Node
 import SCons.SConf
+
+def vulcan_builder(fs, options, graph):
+    # Get the vulcan command line options
+    vulcan_options = options.vulcan_opts or os.environ.get("SCONS_VULCAN_OPTS") or ""
+
+    # Get the path for vulcan exe
+    vulcan_path = os.environ.get("SCONS_VULCAN_PATH")
+    if vulcan_path:
+        vulcan_command = os.path.join(vulcan_path, "vulcan")
+    else:
+        # Search in the PATH
+        vulcan_command = "vulcan"
+            
+    # if graph is None, create a tempfile to write graph
+    temp_file = None
+    if not graph:
+        import tempfile
+        temp_file = tempfile.NamedTemporaryFile(mode="w+t", suffix=".gv", prefix="scons", delete=False)
+        graph = temp_file.name
+        GraphWriter().write(graph, fs.Top)
+        temp_file.close()
+
+    # Call the vulcan
+    print("scons-vulcan: Calling vulcan...")
+    vulcan_process = subprocess.Popen(vulcan_command + " run-build " + vulcan_options + " " + graph, shell=True)
+    vulcan_process.wait()
+
+    if vulcan_process.returncode == 0:
+        print("scons: done executing vulcan")
+    else:
+        print("scons: vulcan execution failed")
+
+    # Clean the tempfile, if created
+    if temp_file:
+        os.unlink(temp_file.name)
+
+    return vulcan_process.returncode
+
 
 class GraphWriter(object):
     whitelist_funcs = {

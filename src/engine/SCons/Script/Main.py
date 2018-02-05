@@ -1104,12 +1104,21 @@ def _main(parser):
         if graph:
             SCons.Spirent.GraphWriter().write(graph, fs.Top)
 
-        # Build the targets
-        nodes = _build_targets(fs, options, targets, target_top)
-        if not nodes:
-            revert_io()
-            print('Found nothing to build')
-            exit_status = 2
+        # If the scons mode is set to vulcan, call the vulcan builder
+        scons_mode = options.mode or os.environ.get("SCONS_MODE")
+        if scons_mode == "vulcan":
+            vulcan_status = SCons.Spirent.vulcan_builder(fs, options, graph)
+            if vulcan_status != 0:
+                # set the exit_status which is used in caller
+                exit_status = 2
+
+        else:
+            # Build the targets
+            nodes = _build_targets(fs, options, targets, target_top)
+            if not nodes:
+                revert_io()
+                print('Found nothing to build')
+                exit_status = 2
 
 def _build_targets(fs, options, targets, target_top):
 
