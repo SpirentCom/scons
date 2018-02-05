@@ -58,27 +58,51 @@ except AttributeError:
         "your pywin32 extensions do not support file handle operations;\n" + \
         "\tparallel (-j) builds may not work reliably with open Python files."
 else:
+    import __builtin__
+
     parallel_msg = None
 
     _builtin_open = open
 
     def _scons_open(*args, **kw):
-        fp = _builtin_open(*args, **kw)
-        win32api.SetHandleInformation(msvcrt.get_osfhandle(fp.fileno()),
-                                      win32con.HANDLE_FLAG_INHERIT,
-                                      0)
+        try:
+            spawn_lock.acquire()
+        except NameError:
+            pass
+        try:
+            fp = _builtin_open(*args, **kw)
+            win32api.SetHandleInformation(msvcrt.get_osfhandle(fp.fileno()),
+                                        win32con.HANDLE_FLAG_INHERIT,
+                                        0)
+        finally:
+            try:
+                spawn_lock.release()
+            except NameError:
+                pass
         return fp
 
     open = _scons_open
+    __builtin__.open = _scons_open
 
     if sys.version_info.major == 2:
         _builtin_file = file
         class _scons_file(_builtin_file):
             def __init__(self, *args, **kw):
-                _builtin_file.__init__(self, *args, **kw)
-                win32api.SetHandleInformation(msvcrt.get_osfhandle(self.fileno()),
-                 win32con.HANDLE_FLAG_INHERIT, 0)
+                try:
+                    spawn_lock.acquire()
+                except NameError:
+                    pass
+                try:
+                    _builtin_file.__init__(self, *args, **kw)
+                    win32api.SetHandleInformation(msvcrt.get_osfhandle(self.fileno()),
+                    win32con.HANDLE_FLAG_INHERIT, 0)
+                finally:
+                    try:
+                        spawn_lock.release()
+                    except NameError:
+                        pass
         file = _scons_file
+        __builtin__.file = _scons_file
     else:
         import io
         for io_class in ['BufferedReader', 'BufferedWriter', 'BufferedRWPair',
@@ -86,9 +110,19 @@ else:
             _builtin_file = getattr(io, io_class)
             class _scons_file(_builtin_file):
                 def __init__(self, *args, **kw):
-                    _builtin_file.__init__(self, *args, **kw)
-                    win32api.SetHandleInformation(msvcrt.get_osfhandle(self.fileno()),
-                        win32con.HANDLE_FLAG_INHERIT, 0)
+                    try:
+                        spawn_lock.acquire()
+                    except NameError:
+                        pass
+                    try:
+                        _builtin_file.__init__(self, *args, **kw)
+                        win32api.SetHandleInformation(msvcrt.get_osfhandle(self.fileno()),
+                            win32con.HANDLE_FLAG_INHERIT, 0)
+                    finally:
+                        try:
+                            spawn_lock.release()
+                        except NameError:
+                            pass
             setattr(io, io_class, _scons_file)
 
 
