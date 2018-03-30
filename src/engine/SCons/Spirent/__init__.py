@@ -130,9 +130,11 @@ class GraphWriter(object):
         if from_id:
             f.write('  n%x -> n%x;\n' % (from_id, to_id))
 
-    def _walk_tree_write_nodes(self, f, parent_id, node, visited):
+    def _walk_tree_write_nodes(self, f, parent_id, node, visited, written):
         node_id = id(node)
         if node_id in visited:
+            if node_id in written:
+                self._write_edge(f, parent_id, node_id)
             return
         visited.add(node_id)
         path = str(node)
@@ -140,6 +142,7 @@ class GraphWriter(object):
             self._write_edge(f, parent_id, node_id)
             if not isinstance(node, SCons.Node.FS.Dir):
                 self._write_derived_node(f, node_id, path, parent_id is None)
+                written.add(node_id)
                 act = node.builder.action
                 target = [node]
                 source = node.sources
@@ -150,22 +153,22 @@ class GraphWriter(object):
                     cmdlines = self._get_node_cmdlines(node, act, target, source, env)
                     env = self._get_env_deltas(node.builder.env)
                     self._write_builder_node(f, builder_id, cmdlines, env)
+                    written.add(builder_id)
                 self._write_edge(f, node_id, builder_id)
                 for child in node.all_children():
-                    self._walk_tree_write_nodes(f, builder_id, child, visited)
+                    self._walk_tree_write_nodes(f, builder_id, child, visited, written)
             else:
                 self._write_dir_node(f, node_id, path, parent_id is None)
+                written.add(node_id)
                 self._write_edge(f, parent_id, node_id)
                 for child in node.all_children():
-                    self._walk_tree_write_nodes(f, node_id, child, visited)
+                    self._walk_tree_write_nodes(f, node_id, child, visited, written)
         elif isinstance(node, SCons.Node.FS.File) and node.exists() and not os.path.isabs(path):
             self._write_edge(f, parent_id, node_id)
             self._write_source_node(f, node_id, path, self._get_node_hash(path), self._get_node_mode(path))
+            written.add(node_id)
             for child in node.all_children():
-                self._walk_tree_write_nodes(f, node_id, child, visited)
-        else:
-            for child in node.all_children():
-                self._walk_tree_write_nodes(f, parent_id, child, visited)
+                self._walk_tree_write_nodes(f, node_id, child, visited, written)
 
     def write(self, path, t):
         progress_display = SCons.SConf.progress_display
@@ -185,7 +188,7 @@ class GraphWriter(object):
             f.write('strict digraph {\n')
             if self._env:
                 f.write('  graph [env=%s]\n' % json.dumps(json.dumps(dict(self._env))))
-            self._walk_tree_write_nodes(f, None, t, set())
+            self._walk_tree_write_nodes(f, None, t, set(), set())
             f.write('}\n')
 
         # pr.disable()
