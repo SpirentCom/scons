@@ -131,6 +131,7 @@ class GraphWriter(object):
             f.write('  n%x -> n%x;\n' % (from_id, to_id))
 
     def _walk_tree_write_nodes(self, f, parent_id, node, visited, written):
+        node = node.disambiguate()
         node_id = id(node)
         if node_id in visited:
             if node_id in written:
