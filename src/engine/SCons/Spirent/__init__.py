@@ -102,6 +102,12 @@ class GraphWriter(object):
     def _get_node_mode(self, path):
         return oct(os.stat(path).st_mode & 0777)
 
+    def _get_builder_id(self, act, target, source, env):
+        # Get the contents of the action command line and hash it
+        from SCons.Subst import SUBST_CMD
+        cmd = act.genstring(target, source, env)
+        return abs(hash(str(env.subst_target_source(cmd, SUBST_CMD, target, source))))
+
     def _write_derived_node(self, f, node_id, path, is_root):
         path = self._path_transform(path)
         attrs = 'type=derived,path=' + json.dumps(path)
@@ -149,10 +155,7 @@ class GraphWriter(object):
                 target = [node]
                 source = node.sources
                 env = node.env or node.builder.env
-                # Get the contents of the action command line and hash it
-                from SCons.Subst import SUBST_CMD
-                cmd = act.genstring(target, source, env)
-                builder_id = abs(hash(str(env.subst_target_source(cmd, SUBST_CMD, target, source))))
+                builder_id = self._get_builder_id(act, target, source, env)
                 if builder_id not in visited:
                     visited.add(builder_id)
                     cmdlines = self._get_node_cmdlines(node, act, target, source, env)
