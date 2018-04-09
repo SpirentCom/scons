@@ -9,6 +9,7 @@ import subprocess
 import SCons.Action
 import SCons.Node
 import SCons.SConf
+import SCons.Subst
 
 def vulcan_builder(fs, options, graph):
     # Get the vulcan command line options
@@ -148,7 +149,10 @@ class GraphWriter(object):
                 target = [node]
                 source = node.sources
                 env = node.env or node.builder.env
-                builder_id = abs(hash(str(act.get_presig(target, source, env))))
+                # Get the contents of the action command line and hash it
+                from SCons.Subst import SUBST_CMD
+                cmd = act.genstring(target, source, env)
+                builder_id = abs(hash(str(env.subst_target_source(cmd, SUBST_CMD, target, source))))
                 if builder_id not in visited:
                     visited.add(builder_id)
                     cmdlines = self._get_node_cmdlines(node, act, target, source, env)
