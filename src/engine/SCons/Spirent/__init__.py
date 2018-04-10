@@ -104,9 +104,8 @@ class GraphWriter(object):
 
     def _get_builder_id(self, act, target, source, env):
         # Get the contents of the action command line and hash it
-        from SCons.Subst import SUBST_CMD
         cmd = act.genstring(target, source, env)
-        return abs(hash(str(env.subst_target_source(cmd, SUBST_CMD, target, source))))
+        return abs(hash(str(env.subst_target_source(cmd, SCons.Subst.SUBST_CMD, target, source))))
 
     def _write_derived_node(self, f, node_id, path, is_root):
         path = self._path_transform(path)
