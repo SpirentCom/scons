@@ -136,15 +136,26 @@ class GraphWriter(object):
         if from_id:
             f.write('  n%x -> n%x;\n' % (from_id, to_id))
 
-    def _walk_tree_write_nodes(self, f, parent_id, node, visited, written):
+    def _is_shared_lib(self, node):
+        sh_lib_extn = ['.so', '.lib']
+        filename = str(node.rfile())
+        extension = os.path.splitext(str(node.rfile()))[1]
+        return extension in sh_lib_extn or ".so." in filename
+
+    def _walk_tree_write_nodes(self, f, parent_id, node, visited, written, transitive=False):
         node = node.disambiguate()
         node_id = id(node)
+        path = str(node)
+        if transitive :
+            for child in node.all_children():
+                if self._is_shared_lib(child):
+                    self._walk_tree_write_nodes(f, parent_id, child, visited, written, True)
+            self._walk_tree_write_nodes(f, parent_id, node, visited, written)
         if node_id in visited:
             if node_id in written:
                 self._write_edge(f, parent_id, node_id)
             return
         visited.add(node_id)
-        path = str(node)
         if node.has_builder():
             self._write_edge(f, parent_id, node_id)
             if not isinstance(node, SCons.Node.FS.Dir):
@@ -164,13 +175,15 @@ class GraphWriter(object):
                 self._write_edge(f, node_id, builder_id)
                 for child in node.all_children():
                     self._walk_tree_write_nodes(f, builder_id, child, visited, written)
+                    if self._is_shared_lib(child):
+                        self._walk_tree_write_nodes(f, builder_id, child, visited, written, True)
             else:
                 self._write_dir_node(f, node_id, path, parent_id is None)
                 written.add(node_id)
                 self._write_edge(f, parent_id, node_id)
                 for child in node.all_children():
                     self._walk_tree_write_nodes(f, node_id, child, visited, written)
-        elif isinstance(node, SCons.Node.FS.File) and node.exists() and not os.path.isabs(path):
+        elif isinstance(node, SCons.Node.FS.File) and node.rfile().exists() and not os.path.isabs(path):
             self._write_edge(f, parent_id, node_id)
             self._write_source_node(f, node_id, path, self._get_node_hash(path), self._get_node_mode(path))
             written.add(node_id)
