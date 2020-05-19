@@ -11,8 +11,8 @@ import SCons.Node
 import SCons.SConf
 import SCons.Subst
 import re
-import ntpath
 
+REX_SH_LIBRARY_OBJ  = re.compile(r"([a-zA-Z0-9\s_\\.\-\+])+[\.](so|lib|dll)")
 def vulcan_builder(fs, options, graph):
     # Get the vulcan command line options
     vulcan_options = options.vulcan_opts or os.environ.get("SCONS_VULCAN_OPTS") or ""
@@ -139,8 +139,8 @@ class GraphWriter(object):
             f.write('  n%x -> n%x;\n' % (from_id, to_id))
 
     def _has_transitive_dependencies(self, node):
-        filename = ntpath.basename(str(node.rfile())) 
-        return re.search("([a-zA-Z0-9\s_\\.\-\+])+[\.](so|lib)",filename)
+        path, filename = os.path.split(str(node.rfile())) 
+        return REX_SH_LIBRARY_OBJ.search(filename)
         
     def _write_transitive_dependencies(self, f, parent_id, node, visited, edge_written, node_written):
         node = node.disambiguate()
