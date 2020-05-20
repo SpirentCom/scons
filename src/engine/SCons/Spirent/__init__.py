@@ -5,11 +5,14 @@ import json
 import os.path
 import time
 import subprocess
+import re
 
 import SCons.Action
 import SCons.Node
 import SCons.SConf
 import SCons.Subst
+
+REX_SH_LIBRARY_OBJ  = re.compile(r"([a-zA-Z0-9\_\.\-\+])+[\.](so|lib|dll)")
 
 def vulcan_builder(fs, options, graph):
     # Get the vulcan command line options
@@ -136,6 +139,27 @@ class GraphWriter(object):
         if from_id:
             f.write('  n%x -> n%x;\n' % (from_id, to_id))
 
+    def _has_transitive_dependencies(self, node):
+        path, filename = os.path.split(str(node.rfile()))
+        return REX_SH_LIBRARY_OBJ.search(filename)
+        
+    def _write_transitive_dependencies(self, f, parent_id, node, visited, edge_written, node_written):
+        node = node.disambiguate()
+        node_id = id(node)
+
+        if node_id in visited:
+            return
+        visited.add(node_id)
+
+        if node_id not in edge_written and node_id in node_written:
+            self._write_edge(f, parent_id, node_id)
+            edge_written.add(node_id)
+
+        if node.has_builder() and not isinstance(node, SCons.Node.FS.Dir):
+            for child in node.all_children():
+                if self._has_transitive_dependencies(child):
+                    self._write_transitive_dependencies(f, parent_id, child, visited, edge_written, node_written)
+
     def _walk_tree_write_nodes(self, f, parent_id, node, visited, written):
         node = node.disambiguate()
         node_id = id(node)
@@ -164,13 +188,19 @@ class GraphWriter(object):
                 self._write_edge(f, node_id, builder_id)
                 for child in node.all_children():
                     self._walk_tree_write_nodes(f, builder_id, child, visited, written)
+                trans_visited = set()
+                trans_written = set()
+                for child in node.all_children():
+                    if self._has_transitive_dependencies(child):
+                        trans_written.add(id(child.disambiguate()))
+                        self._write_transitive_dependencies(f, builder_id, child, trans_visited, trans_written, written)
             else:
                 self._write_dir_node(f, node_id, path, parent_id is None)
                 written.add(node_id)
                 self._write_edge(f, parent_id, node_id)
                 for child in node.all_children():
                     self._walk_tree_write_nodes(f, node_id, child, visited, written)
-        elif isinstance(node, SCons.Node.FS.File) and node.exists() and not os.path.isabs(path):
+        elif isinstance(node, SCons.Node.FS.File) and node.rfile().exists() and not os.path.isabs(path):
             self._write_edge(f, parent_id, node_id)
             self._write_source_node(f, node_id, path, self._get_node_hash(path), self._get_node_mode(path))
             written.add(node_id)
