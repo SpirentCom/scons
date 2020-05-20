@@ -5,14 +5,14 @@ import json
 import os.path
 import time
 import subprocess
+import re
 
 import SCons.Action
 import SCons.Node
 import SCons.SConf
 import SCons.Subst
-import re
 
-REX_SH_LIBRARY_OBJ  = re.compile(r"([a-zA-Z0-9\_\\.\-\+])+[\.](so|lib|dll)")
+REX_SH_LIBRARY_OBJ  = re.compile(r"([a-zA-Z0-9\_\.\-\+])+[\.](so|lib|dll)")
 
 def vulcan_builder(fs, options, graph):
     # Get the vulcan command line options
